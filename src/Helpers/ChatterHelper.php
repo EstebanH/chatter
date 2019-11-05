@@ -2,6 +2,8 @@
 
 namespace DevDojo\Chatter\Helpers;
 
+use Illuminate\Support\Facades\View;
+
 class ChatterHelper
 {
     /**
@@ -103,23 +105,6 @@ class ChatterHelper
      */
     public static function categoriesMenu($categories)
     {
-        $menu = '<ul class="nav nav-pills nav-stacked">';
-
-        foreach ($categories as $category) {
-            $menu .= '<li>';
-            $menu .= '<a href="/'.config('chatter.routes.home').'/'.config('chatter.routes.category').'/'.$category['slug'].'">';
-            $menu .= '<div class="chatter-box" style="background-color:'.$category['color'].'"></div>';
-            $menu .= $category['name'].'</a>';
-
-            if (count($category['parents'])) {
-                $menu .= static::categoriesMenu($category['parents']);
-            }
-
-            $menu .= '</li>';
-        }
-
-        $menu .= '</ul>';
-
-        return $menu;
+        return View::make('chatter:sidebar', $categories);
     }
 }
