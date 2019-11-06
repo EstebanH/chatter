@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as Controller;
 use Illuminate\Support\Facades\Mail;
-use LukeTowers\Purifier\Facades\Purifier;
+use Mews\Purifier\Facades\Purifier;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
