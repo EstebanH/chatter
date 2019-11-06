@@ -6,6 +6,7 @@ use Auth;
 use DevDojo\Chatter\Helpers\ChatterHelper as Helper;
 use DevDojo\Chatter\Models\Models;
 use Illuminate\Routing\Controller as Controller;
+use Illuminate\Support\Str;
 
 class ChatterController extends Controller
 {
@@ -15,7 +16,15 @@ class ChatterController extends Controller
         
         $discussions = Models::discussion()->with('user')->with('post')->with('postsCount')->with('category')->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
         if (isset($slug)) {
-            $category = Models::category()->where('slug', '=', $slug)->first();
+        	$categoryQuery = Models::category()->query();
+
+        	if(Str::contains($slug, '/')) {
+				$categoryQuery->where('slug', '=', substr($slug, strrpos($slug, '/') + 1));
+			} else {
+				$categoryQuery->where('slug', '=', $slug);
+			}
+
+        	$category = $categoryQuery->first();
             
             if (isset($category->id)) {
                 $current_category_id = $category->id;

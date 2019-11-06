@@ -43,7 +43,7 @@ Route::group([
         'as'         => 'category.show',
         'uses'       => 'ChatterController@index',
         'middleware' => $middleware('category.show'),
-    ]);
+    ])->where('slug', '.*');
 
     /*
      * Auth routes.
