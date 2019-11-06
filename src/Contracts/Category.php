@@ -3,5 +3,5 @@
 namespace DevDojo\Chatter\Contracts;
 
 interface Category {
-	function scopeFilterCategories($query);
+	function scopeFilterCategories($query, $slug = null);
 }
