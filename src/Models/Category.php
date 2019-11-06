@@ -2,10 +2,14 @@
 
 namespace DevDojo\Chatter\Models;
 
+use DevDojo\Chatter\Contracts\Category as CategoryContract;
+use DevDojo\Chatter\Traits\ChatterCategoryTrait;
 use Illuminate\Database\Eloquent\Model;
 
-class Category extends Model
+class Category extends Model implements CategoryContract
 {
+	use ChatterCategoryTrait;
+
     protected $table = 'chatter_categories';
     public $timestamps = true;
     public $with = 'parents';
