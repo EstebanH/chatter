@@ -14,6 +14,7 @@ use Illuminate\Routing\Controller as Controller;
 use Illuminate\Support\Facades\Mail;
 use LukeTowers\Purifier\Facades\Purifier;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ChatterPostController extends Controller
 {
@@ -51,6 +52,9 @@ class ChatterPostController extends Controller
         $stripped_tags_body = ['body' => strip_tags($request->body)];
         $validator = Validator::make($stripped_tags_body, [
             'body' => 'required|min:10',
+			'parent_id' => [
+				'nullable', 'integer', Rule::exists('chatter_post', 'id')->where('chatter_discussion_id', $request->chatter_discussion_id)
+			]
         ],[
 			'body.required' => trans('chatter::alert.danger.reason.content_required'),
 			'body.min' => trans('chatter::alert.danger.reason.content_min'),

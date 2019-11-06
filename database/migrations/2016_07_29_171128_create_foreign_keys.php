@@ -22,6 +22,9 @@ class CreateForeignKeys extends Migration
             $table->foreign('user_id')->references('id')->on('users')
                         ->onDelete('cascade')
                         ->onUpdate('cascade');
+            $table->foreign('parent_id')->references('id')->on('chatter_post')
+                        ->onDelete('cascade')
+                        ->onUpdate('cascade');
         });
     }
 
@@ -34,6 +37,7 @@ class CreateForeignKeys extends Migration
         Schema::table('chatter_post', function (Blueprint $table) {
             $table->dropForeign('chatter_post_chatter_discussion_id_foreign');
             $table->dropForeign('chatter_post_user_id_foreign');
+            $table->dropForeign('chatter_post_parent_id_foreign');
         });
     }
 }
