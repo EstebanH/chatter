@@ -2,7 +2,7 @@
 
 namespace DevDojo\Chatter\Controllers;
 
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use DevDojo\Chatter\Helpers\ChatterHelper as Helper;
 use DevDojo\Chatter\Models\Models;
 use Illuminate\Routing\Controller as Controller;
