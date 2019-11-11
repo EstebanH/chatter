@@ -226,7 +226,7 @@ class ChatterDiscussionController extends Controller
 
 			$data = array_merge($data, [
 				'categories' => $categories,
-				'current_category_id' => $discussion_category->id,
+				'current_category_id' => null,
 			]);
 		}
 
