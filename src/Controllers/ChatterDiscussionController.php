@@ -222,7 +222,7 @@ class ChatterDiscussionController extends Controller
         $data = compact('discussion', 'posts', 'chatter_editor');
 
         if(config('chatter.sidebar_in_discussion_view')) {
-			$categories = Models::category()->filterCategories(isset($slug) ? $slug : null)->get();
+			$categories = Models::category()->filterCategories()->get();
 
 			$data = array_merge($data, [
 				'categories' => $categories,
