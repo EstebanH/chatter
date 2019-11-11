@@ -218,8 +218,19 @@ class ChatterDiscussionController extends Controller
         }
 
         $discussion->increment('views');
-        
-        return view('chatter::discussion', compact('discussion', 'posts', 'chatter_editor'));
+
+        $data = compact('discussion', 'posts', 'chatter_editor');
+
+        if(config('chatter.sidebar_in_discussion_view')) {
+			$categories = Models::category()->filterCategories(isset($slug) ? $slug : null)->get();
+
+			$data = array_merge($data, [
+				'categories' => $categories,
+				'current_category_id' => $discussion_category->id,
+			]);
+		}
+
+        return view('chatter::discussion', $data);
     }
 
     /**
