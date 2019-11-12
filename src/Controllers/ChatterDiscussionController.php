@@ -171,7 +171,7 @@ class ChatterDiscussionController extends Controller
         }
     }
 
-    private function notEnoughTimeBetweenDiscussion()
+    protected function notEnoughTimeBetweenDiscussion()
     {
         $user = Auth::user();
 
@@ -270,7 +270,7 @@ class ChatterDiscussionController extends Controller
         //
     }
 
-    private function sanitizeContent($content)
+    protected function sanitizeContent($content)
     {
         libxml_use_internal_errors(true);
         // create a new DomDocument object
@@ -287,7 +287,7 @@ class ChatterDiscussionController extends Controller
         return $doc->saveHtml();
     }
 
-    private function removeElementsByTagName($tagName, $document)
+    protected function removeElementsByTagName($tagName, $document)
     {
         $nodeList = $document->getElementsByTagName($tagName);
         for ($nodeIdx = $nodeList->length; --$nodeIdx >= 0;) {

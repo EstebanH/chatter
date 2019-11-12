@@ -46,7 +46,7 @@ class ChatterHelper
      *
      * @return string
      */
-    private static function replaceUrlParameter($url, $source)
+    protected static function replaceUrlParameter($url, $source)
     {
         $parameter = static::urlParameter($url);
 
@@ -60,7 +60,7 @@ class ChatterHelper
      *
      * @return string
      */
-    private static function urlParameter($url)
+    protected static function urlParameter($url)
     {
         $start = strpos($url, '{') + 1;
 

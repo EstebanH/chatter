@@ -129,7 +129,7 @@ class ChatterPostController extends Controller
         }
     }
 
-    private function notEnoughTimeBetweenPosts()
+    protected function notEnoughTimeBetweenPosts()
     {
         $user = Auth::user();
 
@@ -144,7 +144,7 @@ class ChatterPostController extends Controller
         return false;
     }
 
-    private function sendEmailNotifications($discussion)
+    protected function sendEmailNotifications($discussion)
     {
         $users = $discussion->users->except(Auth::user()->id);
         foreach ($users as $user) {
