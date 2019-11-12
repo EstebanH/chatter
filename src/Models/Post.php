@@ -11,12 +11,12 @@ class Post extends Model
     
     protected $table = 'chatter_post';
     public $timestamps = true;
-    protected $fillable = ['chatter_discussion_id', 'user_id', 'body', 'markdown', 'parent_id'];
+    protected $fillable = ['discussion_id', 'user_id', 'body', 'markdown', 'parent_id'];
     protected $dates = ['deleted_at'];
 
     public function discussion()
     {
-        return $this->belongsTo(Models::className(Discussion::class), 'chatter_discussion_id');
+        return $this->morphTo('discussion');
     }
 
     public function user()

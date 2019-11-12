@@ -53,7 +53,7 @@ class ChatterPostController extends Controller
         $validator = Validator::make($stripped_tags_body, [
             'body' => 'required|min:10',
 			'parent_id' => [
-				'nullable', 'integer', Rule::exists('chatter_post', 'id')->where('chatter_discussion_id', $request->chatter_discussion_id)
+				'nullable', 'integer', Rule::exists('chatter_post', 'id')->where('discussion_id', $request->discussion_id)->where('discussion_type', $request->discussion_type)
 			]
         ],[
 			'body.required' => trans('chatter::alert.danger.reason.content_required'),
@@ -91,7 +91,7 @@ class ChatterPostController extends Controller
 
         $new_post = Models::post()->create($request->all());
 
-        $discussion = Models::discussion()->find($request->chatter_discussion_id);
+        $discussion = Models::discussion()->find($request->discussion_id);
 
         $category = Models::category()->find($discussion->chatter_category_id);
         if (!isset($category->slug)) {
@@ -183,7 +183,7 @@ class ChatterPostController extends Controller
             }
             $post->save();
 
-            $discussion = Models::discussion()->find($post->chatter_discussion_id);
+            $discussion = Models::discussion()->find($post->discussion_id);
 
             $category = Models::category()->find($discussion->chatter_category_id);
             if (!isset($category->slug)) {

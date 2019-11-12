@@ -4,45 +4,41 @@ namespace DevDojo\Chatter\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use DevDojo\Chatter\Contracts\Discussion as DiscussionContract;
+use Illuminate\Support\Facades\Config;
 
-class Discussion extends Model
-{
-    use SoftDeletes;
-    
-    protected $table = 'chatter_discussion';
-    public $timestamps = true;
-    protected $fillable = ['title', 'chatter_category_id', 'user_id', 'slug', 'color'];
-    protected $dates = ['deleted_at', 'last_reply_at'];
+class Discussion extends Model implements DiscussionContract{
 
-    public function user()
-    {
-        return $this->belongsTo(config('chatter.user.namespace'));
-    }
+	use SoftDeletes;
 
-    public function category()
-    {
-        return $this->belongsTo(Models::className(Category::class), 'chatter_category_id');
-    }
+	protected $table = 'chatter_discussion';
+	public $timestamps = true;
+	protected $fillable = ['title', 'chatter_category_id', 'user_id', 'slug', 'color'];
+	protected $dates = ['deleted_at', 'last_reply_at'];
 
-    public function posts()
-    {
-        return $this->hasMany(Models::className(Post::class), 'chatter_discussion_id');
-    }
+	public function user() {
+		return $this->belongsTo(Config::get('chatter.user.namespace'));
+	}
 
-    public function post()
-    {
-        return $this->hasMany(Models::className(Post::class), 'chatter_discussion_id')->orderBy('created_at', 'ASC');
-    }
+	public function category() {
+		return $this->belongsTo(Models::className(Category::class), 'chatter_category_id');
+	}
 
-    public function postsCount()
-    {
-        return $this->posts()
-        ->selectRaw('chatter_discussion_id, count(*)-1 as total')
-        ->groupBy('chatter_discussion_id');
-    }
+	public function posts() {
+		return $this->morphMany(Models::className(Post::class), 'discussion');
+	}
 
-    public function users()
-    {
-        return $this->belongsToMany(config('chatter.user.namespace'), 'chatter_user_discussion', 'discussion_id', 'user_id');
-    }
+	public function post() {
+		return $this->morphMany(Models::className(Post::class), 'discussion')->orderBy('created_at', 'ASC');
+	}
+
+	public function postsCount() {
+		return $this->posts()
+			->selectRaw('discussion_id, discussion_type, count(*)-1 as total')
+			->groupBy(['discussion_id', 'discussion_type']);
+	}
+
+	public function users() {
+		return $this->belongsToMany(Config::get('chatter.user.namespace'), 'chatter_user_discussion', 'discussion_id', 'user_id');
+	}
 }

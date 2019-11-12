@@ -189,7 +189,7 @@
 								</div>
 
 						        <input type="hidden" name="_token" id="csrf_token_field" value="{{ csrf_token() }}">
-						        <input type="hidden" name="chatter_discussion_id" value="{{ $discussion->id }}">
+						        <input type="hidden" name="discussion_id" value="{{ $discussion->id }}">
 						    </form>
 
 						</div><!-- #new_discussion -->

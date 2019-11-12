@@ -194,7 +194,7 @@ class ChatterTableSeeder extends Seeder
         \DB::table('chatter_post')->insert([
                     0 => [
                         'id'                    => 1,
-                        'chatter_discussion_id' => 3,
+                        'discussion_id' => 3,
                         'user_id'               => 1,
                         'body'                  => '<p>My name is Tony and I\'m a developer at <a href="https://devdojo.com" target="_blank">https://devdojo.com</a> and I also work with an awesome company in PB called The Control Group: <a href="http://www.thecontrolgroup.com" target="_blank">http://www.thecontrolgroup.com</a></p>
         <p>You can check me out on twitter at <a href="http://www.twitter.com/tnylea" target="_blank">http://www.twitter.com/tnylea</a></p>
@@ -204,7 +204,7 @@ class ChatterTableSeeder extends Seeder
                     ],
                     1 => [
                         'id'                    => 5,
-                        'chatter_discussion_id' => 6,
+                        'discussion_id' => 6,
                         'user_id'               => 1,
                         'body'                  => '<p>Hey!</p>
         <p>Thanks again for checking out chatter. If you want to login with the default user you can login with the following credentials:</p>
@@ -216,7 +216,7 @@ class ChatterTableSeeder extends Seeder
                 ],
                 2 => [
                     'id'                    => 6,
-                    'chatter_discussion_id' => 7,
+                    'discussion_id' => 7,
                     'user_id'               => 1,
                     'body'                  => '<p>If you would like to leave some feedback or have any issues be sure to visit the github page here: <a href="https://github.com/thedevdojo/chatter" target="_blank">https://github.com/thedevdojo/chatter</a>&nbsp;and I\'m sure I can help out.</p>
         <p>Let\'s make this package the go to Laravel Forum package. Feel free to contribute and share your ideas :)</p>',
@@ -225,7 +225,7 @@ class ChatterTableSeeder extends Seeder
             ],
             3 => [
                 'id'                    => 7,
-                'chatter_discussion_id' => 8,
+                'discussion_id' => 8,
                 'user_id'               => 1,
                 'body'                  => '<p>This is just a random post to show you some of the formatting that you can do in the WYSIWYG editor. You can make your text <strong>bold</strong>, <em>italic</em>, or <span style="text-decoration: underline;">underlined</span>.</p>
         <p style="text-align: center;">Additionally, you can center align text.</p>
@@ -249,7 +249,7 @@ class ChatterTableSeeder extends Seeder
             ],
             4 => [
                 'id'                    => 8,
-                'chatter_discussion_id' => 8,
+                'discussion_id' => 8,
                 'user_id'               => 1,
             'body'                      => '<p>Haha :) Cats!</p>
         <p><img src="https://media.giphy.com/media/5Vy3WpDbXXMze/giphy.gif" alt="" width="250" height="141" /></p>
@@ -259,7 +259,7 @@ class ChatterTableSeeder extends Seeder
         ],
         5 => [
             'id'                    => 9,
-            'chatter_discussion_id' => 9,
+            'discussion_id' => 9,
             'user_id'               => 1,
             'body'                  => '<p>Hey There!</p>
         <p>My name is Tony and I\'m the creator of this package that you\'ve just installed. Thanks for checking out it out and if you have any questions or want to contribute be sure to checkout the repo here: <a href="https://github.com/thedevdojo/chatter" target="_blank">https://github.com/thedevdojo/chatter</a></p>
@@ -269,7 +269,7 @@ class ChatterTableSeeder extends Seeder
         ],
         6 => [
             'id'                    => 10,
-            'chatter_discussion_id' => 9,
+            'discussion_id' => 9,
             'user_id'               => 1,
             'body'                  => '<p>Hell yeah Bro Sauce!</p>
         <p><img src="https://media.giphy.com/media/j5QcmXoFWl4Q0/giphy.gif" alt="" width="366" height="229" /></p>',

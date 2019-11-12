@@ -135,7 +135,7 @@ class ChatterDiscussionController extends Controller
         $discussion = Models::discussion()->create($new_discussion);
 
         $new_post = [
-            'chatter_discussion_id' => $discussion->id,
+            'discussion_id' => $discussion->id,
             'user_id'               => $user_id,
             'body'                  => $request->body,
             ];
@@ -208,7 +208,7 @@ class ChatterDiscussionController extends Controller
         if ($category != $discussion_category->slug) {
             return redirect(config('chatter.routes.home').'/'.config('chatter.routes.discussion').'/'.$discussion_category->slug.'/'.$discussion->slug);
         }
-        $posts = Models::post()->with('user', 'replies')->whereNull('parent_id')->where('chatter_discussion_id', '=', $discussion->id)->orderBy(config('chatter.order_by.posts.order'), config('chatter.order_by.posts.by'))->paginate(10);
+        $posts = Models::post()->with('user', 'replies')->whereNull('parent_id')->where('discussion_id', '=', $discussion->id)->where('discussion_type', get_class($discussion))->orderBy(config('chatter.order_by.posts.order'), config('chatter.order_by.posts.by'))->paginate(10);
 
         $chatter_editor = config('chatter.editor');
 
