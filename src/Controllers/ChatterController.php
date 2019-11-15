@@ -45,7 +45,7 @@ class ChatterController extends Controller
             \App::register('GrahamCampbell\Markdown\MarkdownServiceProvider');
         }
         
-        return view('chatter::home', compact('discussions', 'categories', 'categoriesMenu', 'chatter_editor', 'current_category_id'));
+        return view('chatter::home', compact('discussions', 'categories', 'chatter_editor', 'current_category_id'));
     }
     
     public function login()
