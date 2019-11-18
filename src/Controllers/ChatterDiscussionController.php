@@ -230,14 +230,14 @@ class ChatterDiscussionController extends Controller
 
 		$data = compact('discussion', 'posts', 'chatter_editor');
 
-		if (config('chatter.sidebar_in_discussion_view')) {
+//		if (config('chatter.sidebar_in_discussion_view')) {
 			$categories = Models::category()->filterCategories()->get();
 
 			$data = array_merge($data, [
 				'categories'          => $categories,
 				'current_category_id' => null,
 			]);
-		}
+//		}
 
 		if (request()->ajax() || request()->wantsJson()) {
 			return response()->json($data, 200);
