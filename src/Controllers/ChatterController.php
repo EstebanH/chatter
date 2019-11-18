@@ -2,9 +2,11 @@
 
 namespace DevDojo\Chatter\Controllers;
 
-use Auth;
+use Illuminate\Support\Facades\Auth;
+use DevDojo\Chatter\Helpers\ChatterHelper as Helper;
 use DevDojo\Chatter\Models\Models;
 use Illuminate\Routing\Controller as Controller;
+use Illuminate\Support\Str;
 
 class ChatterController extends Controller
 {
@@ -12,24 +14,42 @@ class ChatterController extends Controller
     {
         $pagination_results = config('chatter.paginate.num_of_results');
 
-        $discussions = Models::discussion()->with('user')->with('post')->with('postsCount')->with('category')->orderBy('created_at', 'DESC')->paginate($pagination_results);
+        $discussions = Models::discussion()->with('user')->with('post')->with('postsCount')->with('category')->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
         if (isset($slug)) {
-            $category = Models::category()->where('slug', '=', $slug)->first();
+        	$categoryQuery = Models::category()->query();
+
+        	if(Str::contains($slug, '/')) {
+				$categoryQuery->where('slug', '=', substr($slug, strrpos($slug, '/') + 1));
+			} else {
+				$categoryQuery->where('slug', '=', $slug);
+			}
+
+        	$category = $categoryQuery->first();
+
             if (isset($category->id)) {
-                $discussions = Models::discussion()->with('user')->with('post')->with('postsCount')->with('category')->where('chatter_category_id', '=', $category->id)->orderBy('created_at', 'DESC')->paginate($pagination_results);
+                $current_category_id = $category->id;
+                $discussions = $discussions->where('chatter_category_id', '=', $category->id);
+            } else {
+                $current_category_id = null;
             }
         }
 
-        $categories = Models::category()->all();
+        $discussions = $discussions->paginate($pagination_results);
+
+        $categories = Models::category()->filterCategories(isset($slug) ? $slug : null)->get();
+
         $chatter_editor = config('chatter.editor');
 
-        // Dynamically register markdown service provider
-        \App::register('GrahamCampbell\Markdown\MarkdownServiceProvider');
+        if ($chatter_editor == 'simplemde') {
+            // Dynamically register markdown service provider
+            \App::register('GrahamCampbell\Markdown\MarkdownServiceProvider');
+        }
+
         if (request()->ajax() || request()->wantsJson()) {
-        	return response()->json([$discussions, $categories,$chatter_editor], 200);
+        	return response()->json([$discussions, $categories,$chatter_editor, $current_category_id], 200);
 		}
 
-        return view('chatter::home', compact('discussions', 'categories', 'chatter_editor'));
+        return view('chatter::home', compact('discussions', 'categories', 'chatter_editor', 'current_category_id'));
     }
 
     public function login()

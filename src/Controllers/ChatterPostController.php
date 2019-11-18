@@ -2,14 +2,19 @@
 
 namespace DevDojo\Chatter\Controllers;
 
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use DevDojo\Chatter\Events\ChatterAfterNewResponse;
+use DevDojo\Chatter\Events\ChatterBeforeNewResponse;
 use DevDojo\Chatter\Mail\ChatterDiscussionUpdated;
 use DevDojo\Chatter\Models\Models;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as Controller;
 use Illuminate\Support\Facades\Mail;
-use Validator;
+use Mews\Purifier\Facades\Purifier;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ChatterPostController extends Controller
 {
@@ -20,7 +25,7 @@ class ChatterPostController extends Controller
 	 */
 	public function index(Request $request)
 	{
-		$total  = 10;
+		/*$total = 10;
 		$offset = 0;
 		if ($request->total) {
 			$total = $request->total;
@@ -28,9 +33,11 @@ class ChatterPostController extends Controller
 		if ($request->offset) {
 			$offset = $request->offset;
 		}
-		$posts = Models::post()->with('user')->orderBy('created_at', 'DESC')->take($total)->offset($offset)->get();
+		$posts = Models::post()->with('user')->orderBy('created_at', 'DESC')->take($total)->offset($offset)->get();*/
 
-		return response()->json($posts);
+		// This is another unused route
+		// we return an empty array to not expose user data to the public
+		return response()->json([]);
 	}
 
 	/**
@@ -44,9 +51,16 @@ class ChatterPostController extends Controller
 	{
 		$stripped_tags_body = ['body' => strip_tags($request->body)];
 		$validator          = Validator::make($stripped_tags_body, [
-			'body' => 'required|min:10',
-		]);
+			'body'      => 'required|min:10',
+			'parent_id' => [
+				'nullable', 'integer', Rule::exists('chatter_post', 'id')->where('discussion_id', $request->discussion_id)->where('discussion_type', $request->discussion_type),
+			],
+		], [
+												  'body.required' => trans('chatter::alert.danger.reason.content_required'),
+												  'body.min'      => trans('chatter::alert.danger.reason.content_min'),
+											  ]);
 
+		Event::dispatch(new ChatterBeforeNewResponse($request, $validator));
 		if (function_exists('chatter_before_new_response')) {
 			chatter_before_new_response($request, $validator);
 		}
@@ -60,16 +74,16 @@ class ChatterPostController extends Controller
 
 		if (config('chatter.security.limit_time_between_posts')) {
 			if ($this->notEnoughTimeBetweenPosts()) {
-				$minute_copy   = (config('chatter.security.time_between_posts') == 1) ? ' minute' : ' minutes';
+				$minutes       = trans_choice('chatter::messages.words.minutes', config('chatter.security.time_between_posts'));
 				$chatter_alert = [
 					'chatter_alert_type' => 'danger',
-					'chatter_alert'      => 'In order to prevent spam, Please allow at least ' . config('chatter.security.time_between_posts') . $minute_copy . ' inbetween submitting content.',
+					'chatter_alert'      => trans('chatter::alert.danger.reason.prevent_spam', [
+						'minutes' => $minutes,
+					]),
 				];
-
 				if (request()->ajax() || request()->wantsJson()) {
 					return response()->json($chatter_alert, 404);
 				}
-
 				return back()->with($chatter_alert)->withInput();
 			}
 		}
@@ -82,7 +96,7 @@ class ChatterPostController extends Controller
 
 		$new_post = Models::post()->create($request->all());
 
-		$discussion = Models::discussion()->find($request->chatter_discussion_id);
+		$discussion = Models::discussion()->find($request->discussion_id);
 
 		$category = Models::category()->find($discussion->chatter_category_id);
 		if (!isset($category->slug)) {
@@ -90,6 +104,10 @@ class ChatterPostController extends Controller
 		}
 
 		if ($new_post->id) {
+			$discussion->last_reply_at = $discussion->freshTimestamp();
+			$discussion->save();
+
+			Event::dispatch(new ChatterAfterNewResponse($request, $new_post));
 			if (function_exists('chatter_after_new_response')) {
 				chatter_after_new_response($request);
 			}
@@ -102,7 +120,7 @@ class ChatterPostController extends Controller
 
 			$chatter_alert = [
 				'chatter_alert_type' => 'success',
-				'chatter_alert'      => 'Response successfully submitted to ' . config('chatter.titles.discussion') . '.',
+				'chatter_alert'      => trans('chatter::alert.success.reason.submitted_to_post'),
 			];
 			if (request()->ajax() || request()->wantsJson()) {
 				return response()->json($chatter_alert, 200);
@@ -111,7 +129,7 @@ class ChatterPostController extends Controller
 		} else {
 			$chatter_alert = [
 				'chatter_alert_type' => 'danger',
-				'chatter_alert'      => 'Sorry, there seems to have been a problem submitting your response.',
+				'chatter_alert'      => trans('chatter::alert.danger.reason.trouble'),
 			];
 			if (request()->ajax() || request()->wantsJson()) {
 				return response()->json($chatter_alert, 404);
@@ -120,7 +138,7 @@ class ChatterPostController extends Controller
 		}
 	}
 
-	private function notEnoughTimeBetweenPosts()
+	protected function notEnoughTimeBetweenPosts()
 	{
 		$user = Auth::user();
 
@@ -135,7 +153,7 @@ class ChatterPostController extends Controller
 		return false;
 	}
 
-	private function sendEmailNotifications($discussion)
+	protected function sendEmailNotifications($discussion)
 	{
 		$users = $discussion->users->except(Auth::user()->id);
 		foreach ($users as $user) {
@@ -156,21 +174,25 @@ class ChatterPostController extends Controller
 		$stripped_tags_body = ['body' => strip_tags($request->body)];
 		$validator          = Validator::make($stripped_tags_body, [
 			'body' => 'required|min:10',
-		]);
+		], [
+												  'body.required' => trans('chatter::alert.danger.reason.content_required'),
+												  'body.min'      => trans('chatter::alert.danger.reason.content_min'),
+											  ]);
 
 		if ($validator->fails()) {
-			if (request()->ajax() || request()->wantsJson()) {
-				return response()->json($validator, 404);
-			}
 			return back()->withErrors($validator)->withInput();
 		}
 
 		$post = Models::post()->find($id);
 		if (!Auth::guest() && (Auth::user()->id == $post->user_id)) {
-			$post->body = $request->body;
+			if ($post->markdown) {
+				$post->body = $request->body;
+			} else {
+				$post->body = Purifier::clean($request->body);
+			}
 			$post->save();
 
-			$discussion = Models::discussion()->find($post->chatter_discussion_id);
+			$discussion = Models::discussion()->find($post->discussion_id);
 
 			$category = Models::category()->find($discussion->chatter_category_id);
 			if (!isset($category->slug)) {
@@ -179,7 +201,7 @@ class ChatterPostController extends Controller
 
 			$chatter_alert = [
 				'chatter_alert_type' => 'success',
-				'chatter_alert'      => 'Successfully updated the ' . config('chatter.titles.discussion') . '.',
+				'chatter_alert'      => trans('chatter::alert.success.reason.updated_post'),
 			];
 			if (request()->ajax() || request()->wantsJson()) {
 				return response()->json($chatter_alert, 200);
@@ -188,7 +210,7 @@ class ChatterPostController extends Controller
 		} else {
 			$chatter_alert = [
 				'chatter_alert_type' => 'danger',
-				'chatter_alert'      => 'Nah ah ah... Could not update your response. Make sure you\'re not doing anything shady.',
+				'chatter_alert'      => trans('chatter::alert.danger.reason.update_post'),
 			];
 			if (request()->ajax() || request()->wantsJson()) {
 				return response()->json($chatter_alert, 400);
@@ -210,23 +232,35 @@ class ChatterPostController extends Controller
 		$post = Models::post()->with('discussion')->findOrFail($id);
 
 		if ($request->user()->id !== (int)$post->user_id) {
-			return redirect('/' . config('chatter.routes.home'))->with([
-																		   'chatter_alert_type' => 'danger',
-																		   'chatter_alert'      => 'Nah ah ah... Could not delete the response. Make sure you\'re not doing anything shady.',
-																	   ]);
+			$chatter_alert = [
+				'chatter_alert_type' => 'danger',
+				'chatter_alert'      => trans('chatter::alert.danger.reason.destroy_post'),
+			];
+
+			if (request()->ajax() || request()->wantsJson()) {
+				return response()->json($chatter_alert, 404);
+			}
+
+			return redirect('/' . config('chatter.routes.home'))->with($chatter_alert);
 		}
 
 		if ($post->discussion->posts()->oldest()->first()->id === $post->id) {
-			$post->discussion->posts()->delete();
-			$post->discussion()->delete();
+			if (config('chatter.soft_deletes')) {
+				$post->discussion->posts()->delete();
+				$post->discussion()->delete();
+			} else {
+				$post->discussion->posts()->forceDelete();
+				$post->discussion()->forceDelete();
+			}
 			$chatter_alert = [
 				'chatter_alert_type' => 'success',
-				'chatter_alert'      => 'Successfully deleted response and ' . strtolower(config('chatter.titles.discussion')) . '.',
+				'chatter_alert'      => trans('chatter::alert.success.reason.destroy_post'),
 			];
+
 			if (request()->ajax() || request()->wantsJson()) {
 				return response()->json($chatter_alert, 200);
 			}
-			return redirect('/' . config('chatter.routes.home'))->with(compact('chatter_alert'));
+			return redirect('/' . config('chatter.routes.home'))->with($chatter_alert);
 		}
 
 		$post->delete();
@@ -234,13 +268,11 @@ class ChatterPostController extends Controller
 		$url           = '/' . config('chatter.routes.home') . '/' . config('chatter.routes.discussion') . '/' . $post->discussion->category->slug . '/' . $post->discussion->slug;
 		$chatter_alert = [
 			'chatter_alert_type' => 'success',
-			'chatter_alert'      => 'Successfully deleted response and ' . strtolower(config('chatter.titles.discussion')) . '.',
+			'chatter_alert'      => trans('chatter::alert.success.reason.destroy_from_discussion'),
 		];
-
 		if (request()->ajax() || request()->wantsJson()) {
 			return response()->json($chatter_alert, 200);
 		}
-
-		return redirect($url)->with(compact('chatter_alert'));
+		return redirect($url)->with($chatter_alert);
 	}
 }

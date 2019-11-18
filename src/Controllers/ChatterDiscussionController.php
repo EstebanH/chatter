@@ -2,12 +2,16 @@
 
 namespace DevDojo\Chatter\Controllers;
 
-use Auth;
 use Carbon\Carbon;
+use DevDojo\Chatter\Events\ChatterAfterNewDiscussion;
+use DevDojo\Chatter\Events\ChatterBeforeNewDiscussion;
 use DevDojo\Chatter\Models\Models;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as Controller;
-use Validator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ChatterDiscussionController extends Controller
 {
@@ -18,7 +22,7 @@ class ChatterDiscussionController extends Controller
 	 */
 	public function index(Request $request)
 	{
-		$total  = 10;
+		/*$total = 10;
 		$offset = 0;
 		if ($request->total) {
 			$total = $request->total;
@@ -26,9 +30,11 @@ class ChatterDiscussionController extends Controller
 		if ($request->offset) {
 			$offset = $request->offset;
 		}
-		$discussions = Models::discussion()->with('user')->with('post')->with('postsCount')->with('category')->orderBy('created_at', 'ASC')->take($total)->offset($offset)->get();
+		$discussions = Models::discussion()->with('user')->with('post')->with('postsCount')->with('category')->orderBy('created_at', 'ASC')->take($total)->offset($offset)->get();*/
 
-		return response()->json($discussions);
+		// Return an empty array to avoid exposing user data to the public.
+		// This index function is not being used anywhere.
+		return response()->json([]);
 	}
 
 	/**
@@ -58,15 +64,28 @@ class ChatterDiscussionController extends Controller
 			'title'               => 'required|min:5|max:255',
 			'body_content'        => 'required|min:10',
 			'chatter_category_id' => 'required',
-		]);
+		], [
+										 'title.required'               => trans('chatter::alert.danger.reason.title_required'),
+										 'title.min'                    => [
+											 'string' => trans('chatter::alert.danger.reason.title_min'),
+										 ],
+										 'title.max'                    => [
+											 'string' => trans('chatter::alert.danger.reason.title_max'),
+										 ],
+										 'body_content.required'        => trans('chatter::alert.danger.reason.content_required'),
+										 'body_content.min'             => trans('chatter::alert.danger.reason.content_min'),
+										 'chatter_category_id.required' => trans('chatter::alert.danger.reason.category_required'),
+									 ]);
 
+
+		Event::dispatch(new ChatterBeforeNewDiscussion($request, $validator));
 		if (function_exists('chatter_before_new_discussion')) {
 			chatter_before_new_discussion($request, $validator);
 		}
 
 		if ($validator->fails()) {
 			if (request()->ajax() || request()->wantsJson()) {
-				return response()->json($validator, 400);
+				return response()->json($validator, 404);
 			}
 			return back()->withErrors($validator)->withInput();
 		}
@@ -75,28 +94,29 @@ class ChatterDiscussionController extends Controller
 
 		if (config('chatter.security.limit_time_between_posts')) {
 			if ($this->notEnoughTimeBetweenDiscussion()) {
-				$minute_copy   = (config('chatter.security.time_between_posts') == 1) ? ' minute' : ' minutes';
+				$minutes       = trans_choice('chatter::messages.words.minutes', config('chatter.security.time_between_posts'));
 				$chatter_alert = [
 					'chatter_alert_type' => 'danger',
-					'chatter_alert'      => 'In order to prevent spam, Please allow at least ' . config('chatter.security.time_between_posts') . $minute_copy . ' inbetween submitting content.',
+					'chatter_alert'      => trans('chatter::alert.danger.reason.prevent_spam', [
+						'minutes' => $minutes,
+					]),
 				];
 				if (request()->ajax() || request()->wantsJson()) {
-					return response()->json($chatter_alert, 400);
+					return response()->json($chatter_alert, 404);
 				}
 				return redirect('/' . config('chatter.routes.home'))->with($chatter_alert)->withInput();
-
 			}
 		}
 
 		// *** Let's gaurantee that we always have a generic slug *** //
-		$slug = str_slug($request->title, '-');
+		$slug = Str::slug($request->title, '-');
 
-		$discussion_exists = Models::discussion()->where('slug', '=', $slug)->first();
+		$discussion_exists = Models::discussion()->where('slug', '=', $slug)->withTrashed()->first();
 		$incrementer       = 1;
 		$new_slug          = $slug;
 		while (isset($discussion_exists->id)) {
 			$new_slug          = $slug . '-' . $incrementer;
-			$discussion_exists = Models::discussion()->where('slug', '=', $new_slug)->first();
+			$discussion_exists = Models::discussion()->where('slug', '=', $new_slug)->withTrashed()->first();
 			$incrementer       += 1;
 		}
 
@@ -120,20 +140,29 @@ class ChatterDiscussionController extends Controller
 		$discussion = Models::discussion()->create($new_discussion);
 
 		$new_post = [
-			'chatter_discussion_id' => $discussion->id,
-			'user_id'               => $user_id,
-			'body'                  => $request->body,
+			'discussion_id' => $discussion->id,
+			'user_id'       => $user_id,
+			'body'          => $request->body,
 		];
+
+		if (config('chatter.editor') == 'simplemde'):
+			$new_post['markdown'] = 1;
+		endif;
+
+		// add the user to automatically be notified when new posts are submitted
+		$discussion->users()->attach($user_id);
 
 		$post = Models::post()->create($new_post);
 
 		if ($post->id) {
+			Event::dispatch(new ChatterAfterNewDiscussion($request, $discussion, $post));
 			if (function_exists('chatter_after_new_discussion')) {
 				chatter_after_new_discussion($request);
 			}
+
 			$chatter_alert = [
 				'chatter_alert_type' => 'success',
-				'chatter_alert'      => 'Successfully created new ' . config('chatter.titles.discussion') . '.',
+				'chatter_alert'      => trans('chatter::alert.success.reason.created_discussion'),
 			];
 			if (request()->ajax() || request()->wantsJson()) {
 				return response()->json($chatter_alert, 200);
@@ -142,7 +171,7 @@ class ChatterDiscussionController extends Controller
 		} else {
 			$chatter_alert = [
 				'chatter_alert_type' => 'danger',
-				'chatter_alert'      => 'Whoops :( There seems to be a problem creating your ' . config('chatter.titles.discussion') . '.',
+				'chatter_alert'      => trans('chatter::alert.danger.reason.create_discussion'),
 			];
 			if (request()->ajax() || request()->wantsJson()) {
 				return response()->json($chatter_alert, 400);
@@ -151,7 +180,7 @@ class ChatterDiscussionController extends Controller
 		}
 	}
 
-	private function notEnoughTimeBetweenDiscussion()
+	protected function notEnoughTimeBetweenDiscussion()
 	{
 		$user = Auth::user();
 
@@ -179,23 +208,41 @@ class ChatterDiscussionController extends Controller
 			return redirect(config('chatter.routes.home'));
 		}
 
-		$discussion          = Models::discussion()->where('slug', '=', $slug)->first();
+		$discussion = Models::discussion()->where('slug', '=', $slug)->first();
+		if (is_null($discussion)) {
+			abort(404);
+		}
+
 		$discussion_category = Models::category()->find($discussion->chatter_category_id);
 		if ($category != $discussion_category->slug) {
 			return redirect(config('chatter.routes.home') . '/' . config('chatter.routes.discussion') . '/' . $discussion_category->slug . '/' . $discussion->slug);
 		}
-		$posts = Models::post()->with('user')->where('chatter_discussion_id', '=', $discussion->id)->orderBy('created_at', 'ASC')->paginate(10);
+		$posts = Models::post()->with('user', 'replies')->whereNull('parent_id')->where('discussion_id', '=', $discussion->id)->where('discussion_type', get_class($discussion))->orderBy(config('chatter.order_by.posts.order'), config('chatter.order_by.posts.by'))->paginate(10);
 
 		$chatter_editor = config('chatter.editor');
 
-		// Dynamically register markdown service provider
-		\App::register('GrahamCampbell\Markdown\MarkdownServiceProvider');
-
-		if (request()->ajax() || request()->wantsJson()) {
-			return response()->json([$discussion, $posts, $chatter_editor], 200);
+		if ($chatter_editor == 'simplemde') {
+			// Dynamically register markdown service provider
+			\App::register('GrahamCampbell\Markdown\MarkdownServiceProvider');
 		}
 
-		return view('chatter::discussion', compact('discussion', 'posts', 'chatter_editor'));
+		$discussion->increment('views');
+
+		$data = compact('discussion', 'posts', 'chatter_editor');
+
+		if (config('chatter.sidebar_in_discussion_view')) {
+			$categories = Models::category()->filterCategories()->get();
+
+			$data = array_merge($data, [
+				'categories'          => $categories,
+				'current_category_id' => null,
+			]);
+		}
+
+		if (request()->ajax() || request()->wantsJson()) {
+			return response()->json($data, 200);
+		}
+		return view('chatter::discussion', $data);
 	}
 
 	/**
@@ -235,7 +282,7 @@ class ChatterDiscussionController extends Controller
 		//
 	}
 
-	private function sanitizeContent($content)
+	protected function sanitizeContent($content)
 	{
 		libxml_use_internal_errors(true);
 		// create a new DomDocument object
@@ -252,7 +299,7 @@ class ChatterDiscussionController extends Controller
 		return $doc->saveHtml();
 	}
 
-	private function removeElementsByTagName($tagName, $document)
+	protected function removeElementsByTagName($tagName, $document)
 	{
 		$nodeList = $document->getElementsByTagName($tagName);
 		for ($nodeIdx = $nodeList->length; --$nodeIdx >= 0;) {
