@@ -217,7 +217,7 @@ class ChatterDiscussionController extends Controller
 		if ($category != $discussion_category->slug) {
 			return redirect(config('chatter.routes.home') . '/' . config('chatter.routes.discussion') . '/' . $discussion_category->slug . '/' . $discussion->slug);
 		}
-		$posts = Models::post()->with('user', 'replies', 'replies.user', 'replies.replies')
+		$posts = Models::post()->with('user', 'replies', 'replies.user', 'replies.replies', 'replies.replies.user')
                                ->whereNull('parent_id')
                                ->where('discussion_id', '=', $discussion->id)
                                ->where('discussion_type', get_class($discussion))
