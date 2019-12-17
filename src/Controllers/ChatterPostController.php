@@ -123,7 +123,7 @@ class ChatterPostController extends Controller
             $chatter_alert = [
                 'chatter_alert_type' => 'success',
                 'chatter_alert'      => trans('chatter::alert.success.reason.submitted_to_post'),
-                'data'               => $new_post->with('user'),
+                'data'               => $new_post->load('user'),
             ];
             if (request()->ajax() || request()->wantsJson()) {
                 return response()->json($chatter_alert, 200);
