@@ -13,37 +13,46 @@ class ChatterController extends Controller
     public function index($slug = '')
     {
         $pagination_results = config('chatter.paginate.num_of_results');
+        $order             = request()->has('sortBy') ? request()->input('sortBy') : config('chatter.order_by.discussions.by');
 
-        if($term = request()->input('q')){
-        	$discussions = Models::discussion()
-							 ->with('user')
-							 ->with(['post' => function($q) use($term) { $q->where('title', 'LIKE', '%'.$term.'%');}] )
-							 ->with('postsCount')
-							 ->with('category')
-							 ->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
-		}else{
-        	$discussions = Models::discussion()
-							 ->with('user')
-							 ->with('post')
-							 ->with('postsCount')
-							 ->with('category')
-							 ->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
-		}
+        if($order === 'asc' || $order === 'desc'){
+            $sortBy = 'title';
+        }else{
+            $sortBy = config('chatter.order_by.discussions.order');
+            $order = $order === 'newest' ? 'desc': 'asc';
+        }
+
+        if ($term = request()->input('q')) {
+            $discussions = Models::discussion()->where('title', 'LIKE', '%' . $term . '%')
+                                 ->with('user')
+                                 ->with('post')
+                                 ->with('postsCount')
+                                 ->with('category')
+                                 ->orderBy($sortBy, $order);
+//                                 ->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
+        } else {
+            $discussions = Models::discussion()
+                                 ->with('user')
+                                 ->with('post')
+                                 ->with('postsCount')
+                                 ->with('category')
+                                 ->orderBy($sortBy, $order);
+        }
 
         if (isset($slug)) {
-        	$categoryQuery = Models::category()->query();
+            $categoryQuery = Models::category()->query();
 
-        	if(Str::contains($slug, '/')) {
-				$categoryQuery->where('slug', '=', substr($slug, strrpos($slug, '/') + 1));
-			} else {
-				$categoryQuery->where('slug', '=', $slug);
-			}
+            if (Str::contains($slug, '/')) {
+                $categoryQuery->where('slug', '=', substr($slug, strrpos($slug, '/') + 1));
+            } else {
+                $categoryQuery->where('slug', '=', $slug);
+            }
 
-        	$category = $categoryQuery->first();
+            $category = $categoryQuery->first();
 
             if (isset($category->id)) {
                 $current_category_id = $category->id;
-                $discussions = $discussions->where('chatter_category_id', '=', $category->id);
+                $discussions         = $discussions->where('chatter_category_id', '=', $category->id);
             } else {
                 $current_category_id = null;
             }
@@ -61,8 +70,8 @@ class ChatterController extends Controller
         }
 
         if (request()->ajax() || request()->wantsJson()) {
-        	return response()->json([$discussions, $categories,$chatter_editor, $current_category_id], 200);
-		}
+            return response()->json([$discussions, $categories, $chatter_editor, $current_category_id], 200);
+        }
 
         return view('chatter::home', compact('discussions', 'categories', 'chatter_editor', 'current_category_id'));
     }
@@ -70,14 +79,14 @@ class ChatterController extends Controller
     public function login()
     {
         if (!Auth::check()) {
-            return \Redirect::to('/'.config('chatter.routes.login').'?redirect='.config('chatter.routes.home'))->with('flash_message', 'Please create an account before posting.');
+            return \Redirect::to('/' . config('chatter.routes.login') . '?redirect=' . config('chatter.routes.home'))->with('flash_message', 'Please create an account before posting.');
         }
     }
 
     public function register()
     {
         if (!Auth::check()) {
-            return \Redirect::to('/'.config('chatter.routes.register').'?redirect='.config('chatter.routes.home'))->with('flash_message', 'Please register for an account.');
+            return \Redirect::to('/' . config('chatter.routes.register') . '?redirect=' . config('chatter.routes.home'))->with('flash_message', 'Please register for an account.');
         }
     }
 }
