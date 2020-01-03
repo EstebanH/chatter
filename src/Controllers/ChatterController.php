@@ -14,7 +14,22 @@ class ChatterController extends Controller
     {
         $pagination_results = config('chatter.paginate.num_of_results');
 
-        $discussions = Models::discussion()->with('user')->with('post')->with('postsCount')->with('category')->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
+        if($term = request()->input('q')){
+        	$discussions = Models::discussion()
+							 ->with('user')
+							 ->with(['post' => function($q) use($term) { $q->where('title', 'LIKE', '%'.$term.'%');}] )
+							 ->with('postsCount')
+							 ->with('category')
+							 ->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
+		}else{
+        	$discussions = Models::discussion()
+							 ->with('user')
+							 ->with('post')
+							 ->with('postsCount')
+							 ->with('category')
+							 ->orderBy(config('chatter.order_by.discussions.order'), config('chatter.order_by.discussions.by'));
+		}
+
         if (isset($slug)) {
         	$categoryQuery = Models::category()->query();
 
